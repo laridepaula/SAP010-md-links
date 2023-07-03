@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require ("path");
+const fetch = require("cross-fetch");
 
 function extractLinks(markdownContent, filePath) {
   const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
@@ -52,6 +53,25 @@ const readDirectory = ( pathInput ) => {
   })
 }
 
+const validateLink = (url) => {
+  return fetch(url.href)
+    .then((response) => {
+      return {
+        ...url,
+        statusCode: response.status,
+        statusMessage: response.statusText,
+      };
+    })
+    .catch((error) => {
+      return {
+        ...url,
+        statusCode: error.errno,
+        statusMessage: error.message,
+      };
+    });
+};
+
+
 const getFileData = (path) => {
   return new Promise((resolve, reject) => {
     fs.stat(path, (err, stats) => {
@@ -62,7 +82,15 @@ const getFileData = (path) => {
 
       if (stats.isFile()) {
         fileRead(path)
-          .then((result) => resolve(result))
+          .then((result) => {
+            const linkPromises = result.map((link) => validateLink(link));
+            Promise.all(linkPromises)
+              .then((validatedLinks) => {
+                const stats = getLinkStatistics(validatedLinks);
+                resolve({ links: validatedLinks, statistics: stats });
+              })
+              .catch((error) => reject(error));
+          })
           .catch((error) => reject(error));
       } else if (stats.isDirectory()) {
         readDirectory(path)
@@ -70,10 +98,22 @@ const getFileData = (path) => {
             const promises = array.map((file) => fileRead(file));
             Promise.allSettled(promises)
               .then((results) => {
-                const fulfilledFiles = results.filter((result) => result.status === "fulfilled");
+                const fulfilledFiles = results.filter(
+                  (result) => result.status === "fulfilled"
+                );
                 const values = fulfilledFiles.map((result) => result.value);
-                const mergedData = values.reduce((acc, current) => acc.concat(current));
-                resolve(mergedData);
+                const mergedData = values.reduce((acc, current) =>
+                  acc.concat(current)
+                );
+                const linkPromises = mergedData.map((link) =>
+                  validateLink(link)
+                );
+                Promise.all(linkPromises)
+                  .then((validatedLinks) => {
+                    const stats = getLinkStatistics(validatedLinks);
+                    resolve({ links: validatedLinks, statistics: stats });
+                  })
+                  .catch((error) => reject(error));
               })
               .catch((error) => reject(error));
           })
@@ -85,6 +125,15 @@ const getFileData = (path) => {
   });
 };
 
+const getLinkStatistics = (links) => {
+  const totalLinks = links.length;
+  const uniqueLinks = [...new Set(links.map((link) => link.href))].length;
+
+  return {
+    total: totalLinks,
+    unique: uniqueLinks,
+  };
+};
 const mdlinks = (path) => {
   return new Promise((resolve, reject) => {
     getFileData(path)
