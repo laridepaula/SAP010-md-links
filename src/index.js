@@ -25,6 +25,10 @@ const fileRead = (filePath) => {
       if (err) {
         reject(err);
       } else {
+        if (!filePath.endsWith(".md")) {
+          reject(`O arquivo ${filePath} não é um arquivo Markdown válido.`);
+          return;
+        }
         try {
           const links = extractLinks(data, filePath);
           resolve(links);
@@ -42,7 +46,7 @@ const readDirectory = ( pathInput ) => {
       if (err){
          reject(err);
       }
-      const contentArray = files ? files.map((file) => path.join(pathInput, file)) : [];
+      const contentArray = files ? files.filter((file) => file.endsWith(".md")).map((file) => path.join(pathInput, file)) : [];
       return resolve(contentArray);
     })
   })
