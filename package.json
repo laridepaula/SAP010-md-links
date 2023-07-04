@@ -10,13 +10,23 @@
     "commit": "c17498042fc79734cec390e6314cbe810e95bf4c"
   },
   "dependencies": {
+    "ansi-colors": "^4.1.3",
+    "ansi-regex": "^6.0.1",
+    "assert": "^2.0.0",
     "babel": "^6.23.0",
+    "chalk": "^1.0.0",
+    "cli-color": "^2.0.3",
+    "commander": "^11.0.0",
+    "cross-fetch": "^3.1.8",
+    "fetch": "^1.1.0",
     "fs": "^0.0.1-security",
     "init": "^0.1.2",
-    "marked": "^5.1.0",
-    "marked-gfm-heading-id": "^3.0.4",
-    "marked-mangle": "^1.0.1",
-    "node": "^20.2.0",
+    "node": "^20.3.1",
+    "node-fecth": "^0.0.1-security",
+    "node-fetch": "^3.3.1",
+    "path": "^0.12.7",
+    "readline": "^1.3.0",
+    "strip-ansi": "^6.0.0",
     "test": "^3.3.0"
   },
   "devDependencies": {
@@ -30,7 +40,7 @@
   },
   "scripts": {
     "pretest": "npm run eslint",
-    "test": "jest",
+    "test": "jest --coverage",
     "eslint": "eslint --ext .js src/ test/"
   }
 }

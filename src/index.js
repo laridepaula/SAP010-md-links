@@ -1,6 +1,7 @@
 const fs = require("fs");
-const path = require ("path");
+const path = require("path");
 const fetch = require("cross-fetch");
+const chalk = require("chalk");
 
 function extractLinks(markdownContent, filePath) {
   const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
@@ -16,7 +17,7 @@ function extractLinks(markdownContent, filePath) {
   if (links.length > 0) {
     return links;
   } else {
-    throw new Error(`Não há links no arquivo ${filePath}`);
+    throw new Error(chalk.red(`Não há links no arquivo ${filePath}`));
   }
 }
 
@@ -27,14 +28,14 @@ const fileRead = (filePath) => {
         reject(err);
       } else {
         if (!filePath.endsWith(".md")) {
-          reject(`O arquivo ${filePath} não é um arquivo Markdown válido.`);
+          reject(chalk.red(`O arquivo ${filePath} não é um arquivo Markdown válido.`));
           return;
         }
         try {
           const links = extractLinks(data, filePath);
           resolve(links);
         } catch (error) {
-          reject(`Não há links no arquivo ${filePath}`);
+          reject(chalk.red(`Não há links no arquivo ${filePath}`));
         }
       }
     });
@@ -47,93 +48,48 @@ const readDirectory = ( pathInput ) => {
       if (err){
          reject(err);
       }
-      const contentArray = files ? files.filter((file) => file.endsWith(".md")).map((file) => path.join(pathInput, file)) : [];
+      const contentArray = files ? files.filter((file) => file.endsWith(".md"))
+      .map((file) => path.join(pathInput, file)) : [];
       return resolve(contentArray);
     })
   })
 }
 
-const validateLink = (url) => {
+function validateLink(url) {
   return fetch(url.href)
-    .then((response) => {
-      return {
-        ...url,
-        statusCode: response.status,
-        statusMessage: response.statusText,
-      };
-    })
-    .catch((error) => {
-      return {
-        ...url,
-        statusCode: error.errno,
-        statusMessage: error.message,
-      };
-    });
-};
+    .then((response) => ({ ...url, statusCode: response.status, statusMessage: response.statusText }))
+    .catch((error) => ({ ...url, statusCode: error.errno, statusMessage: error.message }));
+}
 
-
-const getFileData = (path) => {
+function getFileData(path) {
   return new Promise((resolve, reject) => {
     fs.stat(path, (err, stats) => {
-      if (err) {
-        reject(err);
-        return;
-      }
-
+      if (err) reject(err);
       if (stats.isFile()) {
         fileRead(path)
-          .then((result) => {
-            const linkPromises = result.map((link) => validateLink(link));
-            Promise.all(linkPromises)
-              .then((validatedLinks) => {
-                const stats = getLinkStatistics(validatedLinks);
-                resolve({ links: validatedLinks, statistics: stats });
-              })
-              .catch((error) => reject(error));
-          })
+          .then((result) => Promise.all(result.map((link) => validateLink(link))))
+          .then((validatedLinks) => resolve({ links: validatedLinks, statistics: getLinkStatistics(validatedLinks) }))
           .catch((error) => reject(error));
       } else if (stats.isDirectory()) {
         readDirectory(path)
-          .then((array) => {
-            const promises = array.map((file) => fileRead(file));
-            Promise.allSettled(promises)
-              .then((results) => {
-                const fulfilledFiles = results.filter(
-                  (result) => result.status === "fulfilled"
-                );
-                const values = fulfilledFiles.map((result) => result.value);
-                const mergedData = values.reduce((acc, current) =>
-                  acc.concat(current)
-                );
-                const linkPromises = mergedData.map((link) =>
-                  validateLink(link)
-                );
-                Promise.all(linkPromises)
-                  .then((validatedLinks) => {
-                    const stats = getLinkStatistics(validatedLinks);
-                    resolve({ links: validatedLinks, statistics: stats });
-                  })
-                  .catch((error) => reject(error));
-              })
-              .catch((error) => reject(error));
-          })
+          .then((files) => Promise.all(files.map((file) => fileRead(file))))
+          .then((results) =>
+            Promise.all(results.flat().map((link) => validateLink(link)))
+          )
+          .then((validatedLinks) => resolve({ links: validatedLinks, statistics: getLinkStatistics(validatedLinks) }))
           .catch((error) => reject(error));
       } else {
-        reject(new Error("Path is neither a file nor a directory."));
+        reject(new Error("O caminho não é um diretorio ou arquivo valido"));
       }
     });
   });
-};
+}
 
-const getLinkStatistics = (links) => {
+function getLinkStatistics(links) {
   const totalLinks = links.length;
   const uniqueLinks = [...new Set(links.map((link) => link.href))].length;
-
-  return {
-    total: totalLinks,
-    unique: uniqueLinks,
-  };
-};
+  return { total: totalLinks, unique: uniqueLinks };
+}
 const mdlinks = (path) => {
   return new Promise((resolve, reject) => {
     getFileData(path)
