@@ -3,11 +3,11 @@ const path = require("path");
 const fetch = require("cross-fetch");
 const chalk = require("chalk");
 
-function extractLinks(markdownContent, filePath) {
+function extractLinks(data, filePath) {
   const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
   const links = [];
   let match;
-  while ((match = linkRegex.exec(markdownContent)) !== null) {
+  while ((match = linkRegex.exec(data)) !== null) {
     const text = match[1];
     const href = match[2];
     const link = { href, text, file: filePath };
