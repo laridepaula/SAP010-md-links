@@ -1,3 +1,4 @@
+#! /usr/bin/env node
 const fs = require("fs");
 const path = require("path");
 const fetch = require("cross-fetch");
@@ -20,15 +21,22 @@ function extractLinks(data, filePath) {
     throw new Error(chalk.red(`Não há links no arquivo ${filePath}`));
   }
 }
-
-function fileRead(filePath) {
-  return new Promise((resolve, reject) => {
-    fs.readFile(filePath, "utf8", (err, data) => {
-      if (err) {
-        reject(err);
-      } else {
+function fileRead(filePaths) {
+  let files = [];
+  if (Array.isArray(filePaths)) {
+    files = filePaths;
+  } else {
+    files.push(filePaths);
+  }
+  const filePromises = files.map((filePath) => {
+    return new Promise((resolve, reject) => {
+      fs.readFile(filePath, "utf8", (err, data) => {
+        if (err) {
+          reject(err);
+          return;
+        }
         if (!filePath.endsWith(".md")) {
-          reject(chalk.red(`O arquivo ${filePath} não é um arquivo Markdown válido.`));
+          resolve([]);
           return;
         }
         try {
@@ -37,9 +45,21 @@ function fileRead(filePath) {
         } catch (error) {
           reject(chalk.red(`Não há links no arquivo ${filePath}`));
         }
-      }
+      });
     });
   });
+  return Promise.allSettled(filePromises)
+    .then((results) =>
+      results.reduce((acc, result) => {
+        if (result.status === "fulfilled") {
+          acc.push(result.value);
+        } else {
+          console.error(result.reason);
+        }
+        return acc;
+      }, [])
+    )
+    .then((results) => results.flat());
 }
 
 function readDirectory( pathInput ) {
@@ -102,10 +122,10 @@ function getLinkStatistics(links) {
   };
 }
 
-function mdlinks (path) {
+function mdlinks(path, options) {
   return new Promise((resolve, reject) => {
     getFileData(path)
-      .then((result) => resolve(result))
+      .then((result) => resolve({ result, options }))
       .catch((error) => reject(error));
   });
 }

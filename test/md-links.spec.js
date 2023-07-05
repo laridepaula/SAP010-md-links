@@ -1,7 +1,7 @@
 const { describe, it, expect } = require('@jest/globals');
 const assert = require('assert');
 const chalk = require("chalk");
-const { extractLinks, fileRead, readDirectory } = require('../src/index.js');
+const { extractLinks, fileRead, readDirectory, validateLink } = require('../src/index.js');
 
 describe('extractLinks', () => {
   it('Deveria extrair os links, com text e href', () => {
@@ -98,6 +98,25 @@ describe('readDirectory', () => {
       .catch((error) => {
         assert.strictEqual(error instanceof Error, false);
         done();
+      });
+  });
+});
+
+describe('validateLink', () => {
+  it('Deveria retornar a resposta correta para link valido', (done) => {
+    const url = { href: 'http://exemplo.com' };
+
+    validateLink(url)
+      .then((response) => {
+        assert.deepStrictEqual(response, {
+          href: 'http://exemplo.com',
+          status: 200,
+          ok: "ok",
+        });
+        done();
+      })
+      .catch((error) => {
+        done(error);
       });
   });
 });
