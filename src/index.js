@@ -21,7 +21,7 @@ function extractLinks(markdownContent, filePath) {
   }
 }
 
-const fileRead = (filePath) => {
+function fileRead(filePath) {
   return new Promise((resolve, reject) => {
     fs.readFile(filePath, "utf8", (err, data) => {
       if (err) {
@@ -40,9 +40,9 @@ const fileRead = (filePath) => {
       }
     });
   });
-};
+}
 
-const readDirectory = ( pathInput ) => {
+function readDirectory( pathInput ) {
   return new Promise((resolve, reject) =>{
     fs.readdir (pathInput, (err, files) =>{
       if (err){
@@ -57,8 +57,14 @@ const readDirectory = ( pathInput ) => {
 
 function validateLink(url) {
   return fetch(url.href)
-    .then((response) => ({ ...url, statusCode: response.status, statusMessage: response.statusText }))
-    .catch((error) => ({ ...url, statusCode: error.errno, statusMessage: error.message }));
+    .then((response) => ({ ...url,
+      status: response.status,
+      ok: response.ok ? "ok" : "fail",
+       }))
+    .catch((error) => ({ ...url, 
+      status: error,
+      ok: "fail",
+       }));
 }
 
 function getFileData(path) {
@@ -88,20 +94,27 @@ function getFileData(path) {
 function getLinkStatistics(links) {
   const totalLinks = links.length;
   const uniqueLinks = [...new Set(links.map((link) => link.href))].length;
-  return { total: totalLinks, unique: uniqueLinks };
+  const brokenLinks = links.filter((link) => link.ok === "fail").length;
+  return {
+    total: totalLinks,
+    unique: uniqueLinks,
+    broken: brokenLinks,
+  };
 }
-const mdlinks = (path) => {
+
+function mdlinks (path) {
   return new Promise((resolve, reject) => {
     getFileData(path)
       .then((result) => resolve(result))
       .catch((error) => reject(error));
   });
-};
+}
 
 module.exports = {
   extractLinks,
   fileRead,
   readDirectory,
+  validateLink,
   getFileData,
   mdlinks,
 };
