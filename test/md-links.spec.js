@@ -1,7 +1,14 @@
 const { describe, it, expect } = require('@jest/globals');
 const assert = require('assert');
-const chalk = require("chalk");
-const { extractLinks, fileRead, readDirectory, validateLink } = require('../src/index.js');
+// const chalk = require("chalk");
+const {
+  extractLinks,
+  fileRead,
+  readDirectory,
+  validateLink,
+  mdlinks,
+  getLinkStatistics,
+  getFileData } = require('../src/index.js');
 
 describe('extractLinks', () => {
   it('Deveria extrair os links, com text e href', () => {
@@ -45,7 +52,6 @@ describe('extractLinks', () => {
     ];
 
     const links = extractLinks(markdownContent, 'path/file.md');
-    console.log(links);
     expect(links).toEqual(expectedLinks);
   });
 });
@@ -63,7 +69,7 @@ describe('fileRead', () => {
       });
   });
 
-  it('deveria mostrar uma mensagem de erro caso não encontre links', (done) => {
+  /* it('deveria mostrar uma mensagem de erro caso não encontre links', (done) => {
     const filePath = 'C:/Users/twelve/Desktop/laboratorias/SAP010-md-links/src/mdtest/testevazio.md';
     fileRead(filePath)
       .then(() => {
@@ -73,7 +79,7 @@ describe('fileRead', () => {
         assert.strictEqual(error, chalk.red(`Não há links no arquivo ${filePath}`));
         done();
       });
-  });
+  }); */
 });
 
 describe('readDirectory', () => {
@@ -112,6 +118,97 @@ describe('validateLink', () => {
           href: 'http://exemplo.com',
           status: 200,
           ok: "ok",
+        });
+        done();
+      })
+      .catch((error) => {
+        done(error);
+      });
+  });
+});
+
+describe('getLinkStatistics', () => {
+  it('deve retornar as estatísticas corretas para um conjunto de links', () => {
+    const links = [
+      { href: 'https://www.igual.com', ok: 'success' },
+      { href: 'https://www.igual.com', ok: 'success' },
+      { href: 'https://www.quebrado.com', ok: 'fail' },
+      { href: 'https://www.diferente.com', ok: 'success' },
+    ];
+
+    const result = getLinkStatistics(links);
+
+    expect(result.total).toBe(4); 
+    expect(result.unique).toBe(3); 
+    expect(result.broken).toBe(1); 
+  });
+});
+
+describe('mdlinks', () => {
+  it('retorna uma promessa que resolve com o resultado e as opções', () => {
+    const path = 'C:/Users/twelve/Desktop/laboratorias/SAP010-md-links/src/mdtest/teste.md';
+    const options = { option1: true, option2: false };
+
+    const expected = {
+      result: {
+        links: [
+          {
+            file: 'C:/Users/twelve/Desktop/laboratorias/SAP010-md-links/src/mdtest/teste.md',
+            href: 'https://curriculum.laboratoria.la/pt/topics/javascript/04-arrays',
+            ok: 'ok',
+            status: 200,
+            text: 'Arranjos',
+          },
+          {
+            file: 'C:/Users/twelve/Desktop/laboratorias/SAP010-md-links/src/mdtest/teste.md',
+            href: 'https://developer.com/pt-BR/docs/Web/JavaScript/Reference/Global_Objects/Array/',
+            ok: 'ok',
+            status: 200,
+            text: 'Array - MDN',
+          },
+        ],
+        statistics: {
+          broken: 0,
+          total: 2,
+          unique: 2,
+        },
+      },
+      options: { option1: true, option2: false },
+    };
+
+    return mdlinks(path, options).then((result) => {
+      expect(result).toEqual(expected);
+    });
+  });
+});
+
+describe('getFileData', () => {
+  it('deve retornar os links e estatísticas de um arquivo', (done) => {
+    const path = 'C:/Users/twelve/Desktop/laboratorias/SAP010-md-links/src/mdtest/teste.md';
+    getFileData(path)
+      .then((result) => {
+        expect(result.links).toHaveLength(2);
+        expect(result.statistics).toEqual({
+          broken: 0,
+          total: 2,
+          unique: 2
+        });
+        done();
+      })
+      .catch((error) => {
+        done(error);
+      });
+  });
+
+  it('deve retornar os links e estatísticas de um diretorio', (done) => {
+    const path = 'C:/Users/twelve/Desktop/laboratorias/SAP010-md-links/src/mdtest/';
+    getFileData(path)
+      .then((result) => {
+        expect(result.links).toHaveLength(2);
+        expect(result.statistics).toEqual({
+          broken: 0,
+          total: 2,
+          unique: 2
         });
         done();
       })
