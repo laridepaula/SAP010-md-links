@@ -1,4 +1,3 @@
-#! /usr/bin/env node
 const fs = require("fs");
 const path = require("path");
 const fetch = require("cross-fetch");
@@ -136,5 +135,6 @@ module.exports = {
   readDirectory,
   validateLink,
   getFileData,
+  getLinkStatistics,
   mdlinks,
 };
