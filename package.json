@@ -1,6 +1,6 @@
 {
   "name": "md-links-laridepaula",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "Leitor de arquivos markdown, para validar links",
   "main": "cli.js",
   "engines": {

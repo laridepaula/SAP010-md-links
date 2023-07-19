@@ -81,7 +81,7 @@ function validateLink(url) {
       ok: response.ok ? "ok" : "fail",
        }))
     .catch((error) => ({ ...url, 
-      status: error,
+      status: error.status,
       ok: "fail",
        }));
 }

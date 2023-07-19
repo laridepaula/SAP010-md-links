@@ -21,19 +21,19 @@ mdlinks(path, options)
     } else if (options.validate) {
       console.log(chalk.green.bold('Validating links:'));
       result.links.forEach((link) => {
-        console.log(chalk.yellow(`Link: ${link.href}`));
-        console.log(chalk.cyan(`Text: ${link.text}`));
-        console.log(chalk.green(`File: ${link.file}`));
-        console.log(chalk.magenta(`Status: ${link.ok}`));
-        console.log(chalk.cyan(`HTTP Status: ${link.status}`));
+        console.log(chalk.cyan(`Link: ${link.href}`));
+        console.log(chalk.magenta(`Text: ${link.text}`));
+        console.log(chalk.yellow(`File: ${link.file}`));
+        console.log(chalk.green(`Status: ${link.ok}`));
+        console.log(chalk.green(`HTTP Status: ${link.status}`));
         console.log(chalk.gray('----------------------------'));
       });
     } else {
       console.log(chalk.green.bold('Links:'));
       result.links.forEach((link) => {
-        console.log(chalk.yellow(`Link: ${link.href}`));
-        console.log(chalk.cyan(`Text: ${link.text}`));
-        console.log(chalk.green(`File: ${link.file}`));
+        console.log(chalk.cyan(`Link: ${link.href}`));
+        console.log(chalk.magenta(`Text: ${link.text}`));
+        console.log(chalk.yellow(`File: ${link.file}`));
         console.log(chalk.gray('----------------------------'));
       });
     }
