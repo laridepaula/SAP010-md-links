@@ -11,7 +11,7 @@ A biblioteca é capaz de ler um arquivo `.md`, identificar os links presentes ne
 Para instalar a biblioteca, utilize o gerenciador de pacotes npm. No terminal, execute o seguinte comando:
 
 ```bash
-  npm install md-links-laridepaula
+  npm install md-links-larissadepaula
 ```
 #### 2.2 Utilização
 Após a instalação, você poderá utilizar o Markdown Links através da CLI, basta executar o seguinte comando:
