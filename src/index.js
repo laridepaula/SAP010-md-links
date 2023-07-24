@@ -14,19 +14,16 @@ function extractLinks(data, filePath) {
     links.push(link);
   }
 
-  if (links.length > 0) {
-    return links;
-  } else {
+  if (links.length === 0) {
     throw new Error(chalk.red(`Não há links no arquivo ${filePath}`));
   }
+
+  return links;
 }
+
 function fileRead(filePaths) {
-  let files = [];
-  if (Array.isArray(filePaths)) {
-    files = filePaths;
-  } else {
-    files.push(filePaths);
-  }
+  const files = Array.isArray(filePaths) ? filePaths : [filePaths];
+
   const filePromises = files.map((filePath) => {
     return new Promise((resolve, reject) => {
       fs.readFile(filePath, "utf8", (err, data) => {
@@ -34,10 +31,12 @@ function fileRead(filePaths) {
           reject(err);
           return;
         }
+
         if (!filePath.endsWith(".md")) {
           resolve([]);
           return;
         }
+
         try {
           const links = extractLinks(data, filePath);
           resolve(links);
@@ -47,85 +46,132 @@ function fileRead(filePaths) {
       });
     });
   });
+
   return Promise.allSettled(filePromises)
-    .then((results) =>
-      results.reduce((acc, result) => {
+    .then((results) => {
+      return results.reduce((acc, result) => {
         if (result.status === "fulfilled") {
           acc.push(result.value);
         } else {
           console.error(result.reason);
         }
         return acc;
-      }, [])
-    )
+      }, []);
+    })
     .then((results) => results.flat());
 }
 
-function readDirectory( pathInput ) {
-  return new Promise((resolve, reject) =>{
-    fs.readdir (pathInput, (err, files) =>{
-      if (err){
-         reject(err);
+function readDirectory(pathInput) {
+  return new Promise((resolve, reject) => {
+    fs.readdir(pathInput, (err, files) => {
+      if (err) {
+        reject(err);
+        return;
       }
-      const contentArray = files ? files.filter((file) => file.endsWith(".md"))
-      .map((file) => path.join(pathInput, file)) : [];
-      return resolve(contentArray);
-    })
-  })
+
+      const contentArray = [];
+
+      const filePromises = files.map((file) => {
+        const filePath = path.join(pathInput, file);
+
+        return new Promise((resolveFile, rejectFile) => {
+          fs.stat(filePath, (err, stats) => {
+            if (err) {
+              rejectFile(err);
+              return;
+            }
+
+            if (stats.isDirectory()) {
+              readDirectory(filePath)
+                .then((subContentArray) => {
+                  contentArray.push(...subContentArray);
+                  resolveFile();
+                })
+                .catch(rejectFile);
+            } else if (stats.isFile() && file.endsWith(".md")) {
+              contentArray.push(filePath);
+              resolveFile();
+            } else {
+              resolveFile();
+            }
+          });
+        });
+      });
+
+      Promise.all(filePromises)
+        .then(() => resolve(contentArray))
+        .catch(reject);
+    });
+  });
 }
 
 function validateLink(url) {
   return fetch(url.href)
-    .then((response) => ({ ...url,
+    .then((response) => ({
+      ...url,
       status: response.status,
       ok: response.ok ? "ok" : "fail",
-       }))
-    .catch((error) => ({ ...url, 
+    }))
+    .catch((error) => ({
+      ...url,
       status: error.status,
       ok: "fail",
-       }));
+    }));
 }
 
 function getFileData(path) {
   return new Promise((resolve, reject) => {
     fs.stat(path, (err, stats) => {
-      if (err) reject(err);
+      if (err) {
+        reject(err);
+        return;
+      }
+
       if (stats.isFile()) {
         fileRead(path)
-          .then((result) => Promise.all(result.map((link) => validateLink(link))))
-          .then((validatedLinks) => resolve({ links: validatedLinks, statistics: getLinkStatistics(validatedLinks) }))
-          .catch((error) => reject(error));
+          .then(resolve)
+          .catch(reject);
       } else if (stats.isDirectory()) {
         readDirectory(path)
-          .then((files) => Promise.all(files.map((file) => fileRead(file))))
-          .then((results) =>
-            Promise.all(results.flat().map((link) => validateLink(link)))
-          )
-          .then((validatedLinks) => resolve({ links: validatedLinks, statistics: getLinkStatistics(validatedLinks) }))
-          .catch((error) => reject(error));
+          .then((array) => {
+            const promises = array.map((file) => fileRead(file));
+            Promise.allSettled(promises)
+              .then((results) => {
+                const fulfilledFiles = results.filter((result) => result.status === "fulfilled");
+                const values = fulfilledFiles.map((result) => result.value);
+                const mergeData = values.reduce((acc, current) => acc.concat(current));
+                resolve(mergeData);
+              })
+              .catch(reject);
+          })
+          .catch(reject);
       } else {
-        reject(new Error("O caminho não é um diretorio ou arquivo valido"));
+        reject(new Error("Caminho fornecido não é um arquivo ou diretorio."));
       }
     });
   });
 }
 
-function getLinkStatistics(links) {
-  const totalLinks = links.length;
-  const uniqueLinks = [...new Set(links.map((link) => link.href))].length;
-  const brokenLinks = links.filter((link) => link.ok === "fail").length;
-  return {
-    total: totalLinks,
-    unique: uniqueLinks,
-    broken: brokenLinks,
-  };
-}
-
-function mdlinks(path, options) {
+function mdlinks(path, options = { validate: true }) {
   return new Promise((resolve, reject) => {
     getFileData(path)
-      .then((result) => resolve({ result, options }))
-      .catch((error) => reject(error));
+      .then((result) => {
+        if (options.validate) {
+          const promises = result.map((link) => validateLink(link));
+          Promise.allSettled(promises)
+            .then((validatedLinks) => {
+              const linksWithValidation = result.map((link, index) => ({
+                ...link,
+                ...validatedLinks[index].value,
+              }));
+              resolve(linksWithValidation);
+            })
+            .catch(reject);
+        } else {
+          resolve(result);
+        }
+      })
+      .catch(reject);
   });
 }
 
@@ -135,6 +181,5 @@ module.exports = {
   readDirectory,
   validateLink,
   getFileData,
-  getLinkStatistics,
   mdlinks,
 };

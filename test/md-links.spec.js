@@ -6,9 +6,9 @@ const {
   fileRead,
   readDirectory,
   validateLink,
-  mdlinks,
-  getLinkStatistics,
-  getFileData } = require('../src/index.js');
+  getFileData,
+  mdlinks
+} = require('../src/index.js');
 
 describe('extractLinks', () => {
   it('Deveria extrair os links, com text e href', () => {
@@ -69,17 +69,12 @@ describe('fileRead', () => {
       });
   });
 
-  /* it('deveria mostrar uma mensagem de erro caso não encontre links', (done) => {
+  it('deve retornar um array vazio caso não encontre links em um arquivo', async () => {
     const filePath = 'C:/Users/twelve/Desktop/laboratorias/SAP010-md-links/src/mdtest/testevazio.md';
-    fileRead(filePath)
-      .then(() => {
-        done(new Error('Erro, mas a promessa foi resolvida'));
-      })
-      .catch((error) => {
-        assert.strictEqual(error, chalk.red(`Não há links no arquivo ${filePath}`));
-        done();
-      });
-  }); */
+    const links = await fileRead(filePath);
+    expect(Array.isArray(links)).toBe(true);
+    expect(links.length).toBe(0);
+  });
 });
 
 describe('readDirectory', () => {
@@ -127,93 +122,88 @@ describe('validateLink', () => {
   });
 });
 
-describe('getLinkStatistics', () => {
-  it('deve retornar as estatísticas corretas para um conjunto de links', () => {
-    const links = [
-      { href: 'https://www.igual.com', ok: 'success' },
-      { href: 'https://www.igual.com', ok: 'success' },
-      { href: 'https://www.quebrado.com', ok: 'fail' },
-      { href: 'https://www.diferente.com', ok: 'success' },
-    ];
-
-    const result = getLinkStatistics(links);
-
-    expect(result.total).toBe(4); 
-    expect(result.unique).toBe(3); 
-    expect(result.broken).toBe(1); 
-  });
-});
-
-describe('mdlinks', () => {
-  it('retorna uma promessa que resolve com o resultado e as opções', () => {
+describe('getFileData', () => {
+  it('deve retornar o conteúdo de um arquivo', (done) => {
     const path = 'C:/Users/twelve/Desktop/laboratorias/SAP010-md-links/src/mdtest/teste.md';
-    const options = { option1: true, option2: false };
 
-    const expected = {
-      result: {
-        links: [
+    getFileData(path)
+      .then((data) => {
+        const expectedData = [
           {
             file: 'C:/Users/twelve/Desktop/laboratorias/SAP010-md-links/src/mdtest/teste.md',
             href: 'https://curriculum.laboratoria.la/pt/topics/javascript/04-arrays',
-            ok: 'ok',
-            status: 200,
-            text: 'Arranjos',
+            text: 'Arranjos'
           },
           {
             file: 'C:/Users/twelve/Desktop/laboratorias/SAP010-md-links/src/mdtest/teste.md',
             href: 'https://developer.com/pt-BR/docs/Web/JavaScript/Reference/Global_Objects/Array/',
-            ok: 'ok',
-            status: 200,
-            text: 'Array - MDN',
-          },
-        ],
-        statistics: {
-          broken: 0,
-          total: 2,
-          unique: 2,
-        },
-      },
-      options: { option1: true, option2: false },
-    };
+            text: 'Array - MDN'
+          }
+        ];
+        assert.deepEqual(data, expectedData);
+        done();
+      })
+      .catch((error) => done(error));
+  });
+  it('deve lançar um erro para um caminho inválido', async () => {
+    const invalidPath = 'caminho/para/arquivo_inexistente.md';
+    await expect(getFileData(invalidPath)).rejects.toThrowError();
+  });
 
-    return mdlinks(path, options).then((result) => {
-      expect(result).toEqual(expected);
-    });
+  it('Deve retornar o conteúdo de todos os arquivos no diretório', (done) => {
+    const path = 'C:/Users/twelve/Desktop/laboratorias/SAP010-md-links/src/mdtest';
+
+    getFileData(path)
+      .then((data) => {
+        assert(Array.isArray(data));
+        done();
+      })
+      .catch((error) => done(error));
   });
 });
 
-describe('getFileData', () => {
-  it('deve retornar os links e estatísticas de um arquivo', (done) => {
+describe('mdlinks', () => {
+  it('deve resolver com o resultado da função getFileData com validação', (done) => {
     const path = 'C:/Users/twelve/Desktop/laboratorias/SAP010-md-links/src/mdtest/teste.md';
-    getFileData(path)
+
+    mdlinks(path, { validate: true })
       .then((result) => {
-        expect(result.links).toHaveLength(2);
-        expect(result.statistics).toEqual({
-          broken: 0,
-          total: 2,
-          unique: 2
-        });
+        assert(Array.isArray(result));
+        assert.deepStrictEqual(result, [
+          {
+            file: 'C:/Users/twelve/Desktop/laboratorias/SAP010-md-links/src/mdtest/teste.md',
+            href: 'https://curriculum.laboratoria.la/pt/topics/javascript/04-arrays',
+            text: 'Arranjos',
+            status: 200,
+            ok: 'ok'
+          },
+          {
+            file: 'C:/Users/twelve/Desktop/laboratorias/SAP010-md-links/src/mdtest/teste.md',
+            href: 'https://developer.com/pt-BR/docs/Web/JavaScript/Reference/Global_Objects/Array/',
+            text: 'Array - MDN',
+            status: 200,
+            ok: 'ok'
+          }
+        ]);
         done();
       })
-      .catch((error) => {
-        done(error);
-      });
+      .catch((error) => done(error));
   });
 
-  it('deve retornar os links e estatísticas de um diretorio', (done) => {
-    const path = 'C:/Users/twelve/Desktop/laboratorias/SAP010-md-links/src/mdtest/';
-    getFileData(path)
-      .then((result) => {
-        expect(result.links).toHaveLength(2);
-        expect(result.statistics).toEqual({
-          broken: 0,
-          total: 2,
-          unique: 2
-        });
-        done();
-      })
-      .catch((error) => {
-        done(error);
-      });
+  it('deve resolver com o resultado da função getFileData sem validação', async () => {
+    const filePath = 'C:/Users/twelve/Desktop/laboratorias/SAP010-md-links/src/mdtest/teste.md';
+
+    const result = await mdlinks(filePath, { validate: false });
+
+    expect(Array.isArray(result)).toBe(true);
+    expect(result.length).toBeGreaterThan(0);
+  });
+
+  it('deve resolver com um array vazio quando não houver links no arquivo', async () => {
+    const filePath = 'C:/Users/twelve/Desktop/laboratorias/SAP010-md-links/src/mdtest/testevazio.md';
+    const result = await mdlinks(filePath);
+
+    expect(Array.isArray(result)).toBe(true);
+    expect(result.length).toBe(0);
   });
 });

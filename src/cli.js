@@ -7,20 +7,28 @@ const options = {
   stats: process.argv.includes('--stats'),
   validateAndStats: process.argv.includes('--validate') && process.argv.includes('--stats'),
 };
+
 mdlinks(path, options)
-  .then(({ result, options }) => {
+  .then((result) => {
     if (options.validateAndStats) {
+      const totalLinks = result.length;
+      const uniqueLinks = new Set(result.map((link) => link.href)).size;
+      const brokenLinks = result.filter((link) => link.ok === 'fail').length;
+
       console.log(chalk.green.bold('Validate statistics:'));
-      console.log(chalk.cyan(`Total links: ${result.statistics.total}`));
-      console.log(chalk.magenta(`Unique links: ${result.statistics.unique}`));
-      console.log(chalk.bgRed(`Broken links: ${result.statistics.broken}`));
+      console.log(chalk.cyan(`Total links: ${totalLinks}`));
+      console.log(chalk.magenta(`Unique links: ${uniqueLinks}`));
+      console.log(chalk.bgRed(`Broken links: ${brokenLinks}`));
     } else if (options.stats) {
+      const totalLinks = result.length;
+      const uniqueLinks = new Set(result.map((link) => link.href)).size;
+
       console.log(chalk.green.bold('Statistics:'));
-      console.log(chalk.cyan(`Total links: ${result.statistics.total}`));
-      console.log(chalk.magenta(`Unique links: ${result.statistics.unique}`));
+      console.log(chalk.cyan(`Total links: ${totalLinks}`));
+      console.log(chalk.magenta(`Unique links: ${uniqueLinks}`));
     } else if (options.validate) {
       console.log(chalk.green.bold('Validating links:'));
-      result.links.forEach((link) => {
+      result.forEach((link) => {
         console.log(chalk.cyan(`Link: ${link.href}`));
         console.log(chalk.magenta(`Text: ${link.text}`));
         console.log(chalk.yellow(`File: ${link.file}`));
@@ -30,7 +38,7 @@ mdlinks(path, options)
       });
     } else {
       console.log(chalk.green.bold('Links:'));
-      result.links.forEach((link) => {
+      result.forEach((link) => {
         console.log(chalk.cyan(`Link: ${link.href}`));
         console.log(chalk.magenta(`Text: ${link.text}`));
         console.log(chalk.yellow(`File: ${link.file}`));
