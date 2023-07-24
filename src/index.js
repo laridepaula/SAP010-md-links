@@ -27,15 +27,9 @@ function fileRead(filePaths) {
   const filePromises = files.map((filePath) => {
     return new Promise((resolve, reject) => {
       fs.readFile(filePath, "utf8", (err, data) => {
-        if (err) {
-          reject(err);
-          return;
-        }
+        if (err) reject(err);
 
-        if (!filePath.endsWith(".md")) {
-          resolve([]);
-          return;
-        }
+        if (!filePath.endsWith(".md")) resolve([]);
 
         try {
           const links = extractLinks(data, filePath);
@@ -76,10 +70,7 @@ function readDirectory(pathInput) {
 
         return new Promise((resolveFile, rejectFile) => {
           fs.stat(filePath, (err, stats) => {
-            if (err) {
-              rejectFile(err);
-              return;
-            }
+            if (err) rejectFile(err);
 
             if (stats.isDirectory()) {
               readDirectory(filePath)
@@ -145,8 +136,6 @@ function getFileData(path) {
               .catch(reject);
           })
           .catch(reject);
-      } else {
-        reject(new Error("Caminho fornecido não é um arquivo ou diretorio."));
       }
     });
   });
